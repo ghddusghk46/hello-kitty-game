@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useRef } from "react";
 
 import imgg1 from "./assets/images/g1.jpg";
@@ -22,7 +20,6 @@ import imgsj1 from "./assets/images/sj1.jpg";
 import imgsj2 from "./assets/images/sj2.jpg";
 import imgsj3 from "./assets/images/sj3.jpg";
 import imgsj4 from "./assets/images/sj4.jpg";
-
 import imgGLabel from "./assets/images/g_label.jpg";
 import imgKittyLabel from "./assets/images/kitty_label.jpg";
 import imgMLabel from "./assets/images/m_label.jpg";
@@ -72,10 +69,12 @@ export default function App() {
   const [timeLeft, setTimeLeft] = useState(GAME_TIME);
   const [beltItems, setBeltItems] = useState([]);
   const [feedback, setFeedback] = useState(null);
-  const [dragId, setDragId] = useState(null);
   const [hoverCat, setHoverCat] = useState(null);
   const [shake, setShake] = useState(null);
   const gameRef = useRef(null);
+
+  // 터치/마우스 드래그 상태
+  const dragState = useRef({ uid: null, el: null, offsetX: 0, offsetY: 0 });
 
   const startGame = () => {
     uidCounter = 1;
@@ -89,7 +88,7 @@ export default function App() {
     if (phase !== "play") return;
     const state = {
       items: [], time: GAME_TIME, spawnTimer: 0, lastTs: null,
-      combo: 0, score: 0, missed: 0, dragId: null, raf: null, clockInterval: null,
+      combo: 0, score: 0, missed: 0, dragUid: null, raf: null, clockInterval: null,
       queue: [...ITEMS, ...ITEMS, ...ITEMS].sort(() => Math.random() - 0.5),
     };
     gameRef.current = state;
@@ -118,9 +117,9 @@ export default function App() {
       }
       const dx = speed * dt / 16;
       state.items = state.items.map(it => ({ ...it, x: it.x + dx }));
-      const lost = state.items.filter(it => it.x > BELT_WIDTH + 10 && it.uid !== state.dragId);
+      const lost = state.items.filter(it => it.x > BELT_WIDTH + 10 && it.uid !== state.dragUid);
       if (lost.length) { state.missed += lost.length; setMissed(state.missed); }
-      state.items = state.items.filter(it => it.x <= BELT_WIDTH + 10 || it.uid === state.dragId);
+      state.items = state.items.filter(it => it.x <= BELT_WIDTH + 10 || it.uid === state.dragUid);
       setBeltItems([...state.items]);
       state.raf = requestAnimationFrame(loop);
     };
@@ -128,17 +127,11 @@ export default function App() {
     return () => { clearInterval(state.clockInterval); cancelAnimationFrame(state.raf); gameRef.current = null; };
   }, [phase]);
 
-  const handleDragStart = (e, item) => {
-    setDragId(item.uid);
-    if (gameRef.current) gameRef.current.dragId = item.uid;
-    e.dataTransfer.effectAllowed = "move";
-  };
-
-  const handleDrop = (e, catId) => {
-    e.preventDefault();
-    if (!dragId || !gameRef.current) return;
+  const handleDropOnCat = (catId) => {
+    const uid = dragState.current.uid;
+    if (!uid || !gameRef.current) return;
     const st = gameRef.current;
-    const item = st.items.find(it => it.uid === dragId);
+    const item = st.items.find(it => it.uid === uid);
     if (!item) return;
     const correct = item.cat === catId;
     if (correct) {
@@ -153,47 +146,143 @@ export default function App() {
       setShake(catId); setTimeout(() => setShake(null), 400);
       setFeedback({ text: "틀렸어요! -5", color: "#e04040" });
     }
-    st.items = st.items.filter(it => it.uid !== dragId);
+    st.items = st.items.filter(it => it.uid !== uid);
+    st.dragUid = null;
     setBeltItems([...st.items]);
-    setDragId(null); st.dragId = null; setHoverCat(null);
+    dragState.current.uid = null;
+    setHoverCat(null);
     setTimeout(() => setFeedback(null), 800);
   };
+
+  // 마우스 이벤트
+  const onMouseDown = (e, item) => {
+    e.preventDefault();
+    dragState.current.uid = item.uid;
+    if (gameRef.current) gameRef.current.dragUid = item.uid;
+    const el = document.createElement("div");
+    el.style.cssText = `position:fixed;z-index:9999;pointer-events:none;width:80px;height:80px;border-radius:16px;border:2px solid #f0b0c8;background:white;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(224,96,160,0.3);`;
+    el.innerHTML = `<img src="${item.img}" style="width:58px;height:58px;object-fit:cover;border-radius:10px;" />`;
+    document.body.appendChild(el);
+    dragState.current.el = el;
+    const rect = e.currentTarget.getBoundingClientRect();
+    dragState.current.offsetX = e.clientX - rect.left - rect.width / 2;
+    dragState.current.offsetY = e.clientY - rect.top - rect.height / 2;
+    el.style.left = (e.clientX - 40) + "px";
+    el.style.top = (e.clientY - 40) + "px";
+  };
+
+  const onMouseMove = (e) => {
+    const el = dragState.current.el;
+    if (!el) return;
+    el.style.left = (e.clientX - 40) + "px";
+    el.style.top = (e.clientY - 40) + "px";
+    // 호버 감지
+    el.style.display = "none";
+    const target = document.elementFromPoint(e.clientX, e.clientY);
+    el.style.display = "flex";
+    const catEl = target?.closest("[data-catid]");
+    setHoverCat(catEl ? catEl.dataset.catid : null);
+  };
+
+  const onMouseUp = (e) => {
+    const el = dragState.current.el;
+    if (el) { el.remove(); dragState.current.el = null; }
+    el && el.remove();
+    // 드롭 대상 찾기
+    const ghost = dragState.current.el
+    if (ghost) ghost.style.display = "none";
+    const target = document.elementFromPoint(e.clientX, e.clientY);
+    const catEl = target?.closest("[data-catid]");
+    if (catEl) handleDropOnCat(catEl.dataset.catid);
+    else { dragState.current.uid = null; if (gameRef.current) gameRef.current.dragUid = null; }
+    setHoverCat(null);
+  };
+
+  // 터치 이벤트
+  const onTouchStart = (e, item) => {
+    e.preventDefault();
+    dragState.current.uid = item.uid;
+    if (gameRef.current) gameRef.current.dragUid = item.uid;
+    const touch = e.touches[0];
+    const el = document.createElement("div");
+    el.style.cssText = `position:fixed;z-index:9999;pointer-events:none;width:80px;height:80px;border-radius:16px;border:2px solid #f0b0c8;background:white;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(224,96,160,0.3);transform:scale(1.1);`;
+    el.innerHTML = `<img src="${item.img}" style="width:58px;height:58px;object-fit:cover;border-radius:10px;" />`;
+    document.body.appendChild(el);
+    dragState.current.el = el;
+    el.style.left = (touch.clientX - 40) + "px";
+    el.style.top = (touch.clientY - 40) + "px";
+  };
+
+  const onTouchMove = (e) => {
+    e.preventDefault();
+    const el = dragState.current.el;
+    if (!el) return;
+    const touch = e.touches[0];
+    el.style.left = (touch.clientX - 40) + "px";
+    el.style.top = (touch.clientY - 40) + "px";
+    el.style.display = "none";
+    const target = document.elementFromPoint(touch.clientX, touch.clientY);
+    el.style.display = "flex";
+    const catEl = target?.closest("[data-catid]");
+    setHoverCat(catEl ? catEl.dataset.catid : null);
+  };
+
+  const onTouchEnd = (e) => {
+    const el = dragState.current.el;
+    const touch = e.changedTouches[0];
+    if (el) { el.style.display = "none"; }
+    const target = document.elementFromPoint(touch.clientX, touch.clientY);
+    const catEl = target?.closest("[data-catid]");
+    if (el) { el.remove(); dragState.current.el = null; }
+    if (catEl) handleDropOnCat(catEl.dataset.catid);
+    else { dragState.current.uid = null; if (gameRef.current) gameRef.current.dragUid = null; }
+    setHoverCat(null);
+  };
+
+  useEffect(() => {
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, []);
 
   const timerPct = timeLeft / GAME_TIME;
   const timerColor = timerPct > 0.5 ? "#e060a0" : timerPct > 0.25 ? "#e08030" : "#e04040";
 
   if (phase === "start") return (
-    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:520, gap:16, fontFamily:"sans-serif", background:"#fff5f9" }}>
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:"100vh", gap:16, fontFamily:"sans-serif", background:"#fff5f9", padding:20 }}>
       <div style={{ fontSize:48 }}>🎀</div>
-      <div style={{ fontSize:24, fontWeight:700, color:"#e060a0" }}>홍푸동 게임</div>
-      <div style={{ fontSize:14, color:"#888", textAlign:"center", lineHeight:1.8 }}>
+      <div style={{ fontSize:22, fontWeight:700, color:"#e060a0", textAlign:"center" }}>🎀 홍푸동 게임 🎀</div>
+      <div style={{ fontSize:13, color:"#888", textAlign:"center", lineHeight:1.8 }}>
         컨베이어 벨트 위 캐릭터를 올바른 상자에<br/>드래그해서 분류하세요!<br/>콤보를 이어가면 보너스 점수!
       </div>
-      <div style={{ display:"flex", gap:10, flexWrap:"wrap", justifyContent:"center", marginTop:8 }}>
+      <div style={{ display:"flex", gap:8, flexWrap:"wrap", justifyContent:"center" }}>
         {CATEGORIES.map(c => (
-          <div key={c.id} style={{ background:c.color, border:`2px solid ${c.border}`, borderRadius:16, padding:"8px 12px", display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
-            <img src={c.labelImg} alt={c.name} style={{ width:48, height:48, borderRadius:10, objectFit:"cover" }} />
-            <span style={{ fontSize:12, fontWeight:600, color:c.border }}>{c.name}</span>
+          <div key={c.id} style={{ background:c.color, border:`2px solid ${c.border}`, borderRadius:16, padding:"8px 10px", display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
+            <img src={c.labelImg} alt={c.name} style={{ width:44, height:44, borderRadius:10, objectFit:"cover" }} />
+            <span style={{ fontSize:11, fontWeight:600, color:c.border }}>{c.name}</span>
           </div>
         ))}
       </div>
-      <button onClick={startGame} style={{ marginTop:16, background:"#e060a0", color:"white", border:"none", borderRadius:24, padding:"12px 36px", fontSize:18, fontWeight:700, cursor:"pointer" }}>
+      <button onClick={startGame} style={{ marginTop:12, background:"#e060a0", color:"white", border:"none", borderRadius:24, padding:"12px 36px", fontSize:18, fontWeight:700, cursor:"pointer" }}>
         게임 시작 🎀
       </button>
     </div>
   );
 
   if (phase === "end") return (
-    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:520, gap:16, fontFamily:"sans-serif", background:"#fff5f9" }}>
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:"100vh", gap:16, fontFamily:"sans-serif", background:"#fff5f9" }}>
       <div style={{ fontSize:48 }}>🎀</div>
-      <div style={{ fontSize:24, fontWeight:700, color:"#e060a0" }}>게임 종료!</div>
+      <div style={{ fontSize:22, fontWeight:700, color:"#e060a0" }}>게임 종료!</div>
       <div style={{ background:"#ffd6e8", border:"2px solid #e060a0", borderRadius:20, padding:"20px 48px", textAlign:"center" }}>
         <div style={{ fontSize:13, color:"#aaa" }}>최종 점수</div>
         <div style={{ fontSize:52, fontWeight:700, color:"#e060a0" }}>{score}</div>
         <div style={{ fontSize:13, color:"#bbb", marginTop:4 }}>놓친 캐릭터: {missed}개</div>
       </div>
-      <div style={{ fontSize:16, color:"#e060a0" }}>
-        {score >= 200 ? "🌟 완벽해요! 푸동이 만지기쿠폰!! 💕" : score >= 100 ? "노력하셈~" : "🎀 탈락 ㅉㅉ"}
+      <div style={{ fontSize:15, color:"#e060a0", textAlign:"center" }}>
+        {score >= 200 ? "완벽해요! 홍푸동 만지기쿠폰!! 💕" : score >= 100 ? "엥진짜?" : "🎀 노력하셈 ㅉㅉ"}
       </div>
       <button onClick={startGame} style={{ background:"#e060a0", color:"white", border:"none", borderRadius:24, padding:"12px 36px", fontSize:16, fontWeight:700, cursor:"pointer" }}>
         다시 하기 🔄
@@ -203,69 +292,67 @@ export default function App() {
 
   return (
     <div style={{ fontFamily:"sans-serif", userSelect:"none", position:"relative", background:"#fff5f9", minHeight:"100vh" }}>
-      {/* 헤더 */}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 16px", background:"#ffd6e8", borderBottom:"2px solid #e060a0" }}>
-        <div style={{ fontSize:16, fontWeight:700, color:"#e060a0" }}>🎀 홍푸동 게임 🎀</div>
-        <div style={{ display:"flex", gap:14, alignItems:"center" }}>
-          {combo >= 2 && <div style={{ background:"#e060a0", color:"white", borderRadius:12, padding:"2px 10px", fontSize:12, fontWeight:600 }}>콤보 x{combo}!</div>}
+        <div style={{ fontSize:15, fontWeight:700, color:"#e060a0" }}>🎀 홍푸동 게임 🎀</div>
+        <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+          {combo >= 2 && <div style={{ background:"#e060a0", color:"white", borderRadius:12, padding:"2px 8px", fontSize:11, fontWeight:600 }}>콤보 x{combo}!</div>}
           <div style={{ fontSize:12, color:"#666" }}>놓침: <b style={{ color:"#e04040" }}>{missed}</b></div>
-          <div style={{ fontSize:16, fontWeight:700, color:"#e060a0" }}>점수: {score}</div>
+          <div style={{ fontSize:15, fontWeight:700, color:"#e060a0" }}>점수: {score}</div>
         </div>
       </div>
 
-      {/* 타이머 */}
       <div style={{ height:8, background:"#f0d0dc" }}>
         <div style={{ height:"100%", width:`${timerPct*100}%`, background:timerColor, transition:"width 1s linear, background 0.5s" }} />
       </div>
       <div style={{ textAlign:"center", fontSize:13, color:timerColor, fontWeight:700, padding:"2px 0" }}>{timeLeft}초</div>
 
-      {/* 컨베이어 벨트 */}
       <div style={{ position:"relative", height:110, background:"#fff0f5", borderTop:"2px solid #f0b0c8", borderBottom:"2px solid #f0b0c8", overflow:"hidden" }}>
         <div style={{ position:"absolute", inset:0, background:"repeating-linear-gradient(90deg, transparent 0px, transparent 38px, rgba(224,96,160,0.07) 38px, rgba(224,96,160,0.07) 76px)" }} />
         {beltItems.map(item => (
-          <div key={item.uid} draggable onDragStart={e => handleDragStart(e, item)}
+          <div key={item.uid}
+            onMouseDown={e => onMouseDown(e, item)}
+            onTouchStart={e => onTouchStart(e, item)}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
             style={{
               position:"absolute", top:"50%", transform:"translateY(-50%)",
               left:item.x, width:82, height:82,
               background:"white", borderRadius:16, border:"2px solid #f0b0c8",
-              display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
-              cursor:"grab", opacity:item.uid === dragId ? 0.4 : 1,
-              boxShadow:"0 2px 8px rgba(224,96,160,0.15)", gap:2,
+              display:"flex", alignItems:"center", justifyContent:"center",
+              cursor:"grab", boxShadow:"0 2px 8px rgba(224,96,160,0.15)",
+              touchAction:"none",
             }}>
-            <img src={item.img} alt={item.name} style={{ width:58, height:58, objectFit:"cover", borderRadius:10 }} />
+            <img src={item.img} alt={item.name} style={{ width:60, height:60, objectFit:"cover", borderRadius:10, pointerEvents:"none" }} />
           </div>
         ))}
       </div>
 
-      {/* 드롭 존 */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr", gap:6, padding:10 }}>
         {CATEGORIES.map(cat => (
           <div key={cat.id}
-            onDragOver={e => { e.preventDefault(); setHoverCat(cat.id); }}
-            onDragLeave={() => setHoverCat(null)}
-            onDrop={e => handleDrop(e, cat.id)}
+            data-catid={cat.id}
             style={{
               minHeight:90, borderRadius:14,
               background:hoverCat === cat.id ? cat.color : "white",
               border:`2.5px ${hoverCat === cat.id ? "solid" : "dashed"} ${cat.border}`,
               display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
-              gap:4, transition:"all 0.12s", cursor:"pointer",
+              gap:4, transition:"all 0.12s",
               animation:shake === cat.id ? "shake 0.4s" : "none",
             }}>
-            <img src={cat.labelImg} alt={cat.name} style={{ width:44, height:44, borderRadius:10, objectFit:"cover" }} />
-            <span style={{ fontSize:11, fontWeight:600, color:cat.border }}>{cat.name}</span>
-            {hoverCat === cat.id && <span style={{ fontSize:10, opacity:0.7, color:cat.border }}>여기!</span>}
+            <img src={cat.labelImg} alt={cat.name} style={{ width:42, height:42, borderRadius:10, objectFit:"cover", pointerEvents:"none" }} />
+            <span style={{ fontSize:10, fontWeight:600, color:cat.border, pointerEvents:"none" }}>{cat.name}</span>
+            {hoverCat === cat.id && <span style={{ fontSize:9, opacity:0.7, color:cat.border, pointerEvents:"none" }}>여기!</span>}
           </div>
         ))}
       </div>
 
       {feedback && (
         <div style={{
-          position:"absolute", top:160, left:"50%", transform:"translateX(-50%)",
+          position:"fixed", top:"40%", left:"50%", transform:"translateX(-50%)",
           background:"white", border:`2px solid ${feedback.color}`,
           color:feedback.color, borderRadius:20, padding:"6px 20px",
           fontWeight:700, fontSize:16, pointerEvents:"none",
-          animation:"fadeUp 0.8s ease forwards", zIndex:10,
+          animation:"fadeUp 0.8s ease forwards", zIndex:10000,
         }}>{feedback.text}</div>
       )}
 
