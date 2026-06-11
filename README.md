@@ -1,16 +1,98 @@
-# React + Vite
+# Hello Kitty Game
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Sanrio-style character images that move along a conveyor belt must be dragged into the matching character box before they pass by. Score points by sorting correctly, keep a combo going for bonus points, and try to get the highest score within the time limit.
 
-Currently, two official plugins are available:
+## Preview
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+This project is a small React game built with Vite.
 
-## React Compiler
+- Drag-and-drop character sorting gameplay
+- 60-second timed round
+- Score, combo, missed-item, and timer tracking
+- Mouse and touch controls
+- Cute pastel character category zones
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Tech Stack
 
-## Expanding the ESLint configuration
+- React
+- Vite
+- JavaScript
+- CSS / inline styles
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Getting Started
+
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Run the development server
+
+```bash
+npm run dev
+```
+
+Open the local URL shown in the terminal, usually:
+
+```text
+http://localhost:5173
+```
+
+## Available Scripts
+
+```bash
+npm run dev
+```
+
+Starts the Vite development server.
+
+```bash
+npm run build
+```
+
+Builds the app for production.
+
+```bash
+npm run preview
+```
+
+Previews the production build locally.
+
+```bash
+npm run lint
+```
+
+Runs ESLint.
+
+## Project Structure
+
+```text
+hello-kitty-game/
++-- public/
+|   +-- favicon.svg
+|   +-- icons.svg
++-- src/
+|   +-- assets/
+|   |   +-- images/
+|   +-- App.jsx
+|   +-- App.css
+|   +-- index.css
+|   +-- main.jsx
++-- index.html
++-- package.json
++-- vite.config.js
+```
+
+## How to Play
+
+1. Start the game.
+2. Watch the character cards move across the belt.
+3. Drag each card into the matching character category.
+4. Correct matches increase your score and combo.
+5. Wrong matches reduce your score.
+6. Try to sort as many as possible before the timer ends.
+
+## Notes
+
+This is a fan-made learning project and is not affiliated with Sanrio.
