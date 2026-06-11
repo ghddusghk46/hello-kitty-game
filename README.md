@@ -1,71 +1,73 @@
 # Hello Kitty Game
 
-Sanrio-style character images that move along a conveyor belt must be dragged into the matching character box before they pass by. Score points by sorting correctly, keep a combo going for bonus points, and try to get the highest score within the time limit.
+컨베이어 벨트 위로 지나가는 산리오 스타일 캐릭터 이미지를 알맞은 캐릭터 구역에 드래그해서 분류하는 미니 게임입니다.
 
-## Preview
+제한 시간 안에 최대한 많은 캐릭터를 정확하게 분류하고, 콤보를 이어가며 높은 점수를 노려보세요.
 
-This project is a small React game built with Vite.
+## 프로젝트 소개
 
-- Drag-and-drop character sorting gameplay
-- 60-second timed round
-- Score, combo, missed-item, and timer tracking
-- Mouse and touch controls
-- Cute pastel character category zones
+이 프로젝트는 React와 Vite로 만든 간단한 드래그 앤 드롭 게임입니다.
 
-## Tech Stack
+- 캐릭터 이미지를 알맞은 구역에 분류하는 게임
+- 60초 제한 시간
+- 점수, 콤보, 놓친 캐릭터 수 표시
+- 마우스와 터치 조작 지원
+- 파스텔톤의 귀여운 캐릭터 구역 UI
+
+## 기술 스택
 
 - React
 - Vite
 - JavaScript
 - CSS / inline styles
 
-## Getting Started
+## 실행 방법
 
-### 1. Install dependencies
+### 1. 패키지 설치
 
 ```bash
 npm install
 ```
 
-### 2. Run the development server
+### 2. 개발 서버 실행
 
 ```bash
 npm run dev
 ```
 
-Open the local URL shown in the terminal, usually:
+터미널에 표시되는 로컬 주소로 접속합니다.
 
 ```text
 http://localhost:5173
 ```
 
-## Available Scripts
+## 사용 가능한 명령어
 
 ```bash
 npm run dev
 ```
 
-Starts the Vite development server.
+개발 서버를 실행합니다.
 
 ```bash
 npm run build
 ```
 
-Builds the app for production.
+프로덕션용 파일을 빌드합니다.
 
 ```bash
 npm run preview
 ```
 
-Previews the production build locally.
+빌드된 결과물을 로컬에서 미리 확인합니다.
 
 ```bash
 npm run lint
 ```
 
-Runs ESLint.
+ESLint 검사를 실행합니다.
 
-## Project Structure
+## 폴더 구조
 
 ```text
 hello-kitty-game/
@@ -84,15 +86,15 @@ hello-kitty-game/
 +-- vite.config.js
 ```
 
-## How to Play
+## 게임 방법
 
-1. Start the game.
-2. Watch the character cards move across the belt.
-3. Drag each card into the matching character category.
-4. Correct matches increase your score and combo.
-5. Wrong matches reduce your score.
-6. Try to sort as many as possible before the timer ends.
+1. 게임을 시작합니다.
+2. 컨베이어 벨트 위로 지나가는 캐릭터 카드를 확인합니다.
+3. 캐릭터 카드를 알맞은 캐릭터 구역으로 드래그합니다.
+4. 정답이면 점수와 콤보가 올라갑니다.
+5. 오답이면 점수가 깎이고 콤보가 초기화됩니다.
+6. 시간이 끝나기 전에 최대한 많은 캐릭터를 분류합니다.
 
-## Notes
+## 참고
 
-This is a fan-made learning project and is not affiliated with Sanrio.
+이 프로젝트는 학습용 팬 프로젝트이며 Sanrio와 공식적으로 관련이 없습니다.
